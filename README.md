@@ -1,5 +1,5 @@
-# rscpu
-Relatively Simple CPU
+# evscpu
+Extended Very Simple CPU
 
 Because i have too much free time (not really, shed a tear)
 
@@ -20,13 +20,15 @@ The easiest organization is:
 - SUB: subtract the content of the memory address from AC
 - AND: and the content of the memory address to AC
 - NOR: nor the content of the memory address to AC
+- LIT: load a constant
 - (ADL): add a constant to AC
 - INC: increase the content of the memory address in-place
 - (SHR): shift right the content of the memory address in-place
 - JMP: jump to the specified location
 - (JPI): jump to the content of the specified location
 - JZE: Jump if AC is zero
-- LIT: Load a constant in AC
+- (JNS): Jump if AC has negative bit set
+- LDA: Load the content at the cell
 - LDI: Load the content pointed by the location in AC
 - STA: Store the content of AC in the specified location
 - STI: Store the content of AC in the pointed position of the specified location
