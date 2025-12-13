@@ -94,12 +94,12 @@ JPI @ : 1001 address( 12 bit )          -- TODO
 JNZ @ : 1010 address( 12 bit )          -- TODO
 
     IR <- MEM[PC], DR <- MEM[PC];
-    PC <- DR IF AC == 0;
+    PC <- DR IF AC != 0;
     
 JZE @ : 1011 address( 12 bit )          -- TODO
 
     IR <- MEM[PC], DR <- MEM[PC];
-    PC <- DR IF AC[15] == 1;
+    PC <- DR IF AC == 0;
 
 LDA @ : 1100 address( 12 bit )          -- TODO
 
@@ -144,11 +144,11 @@ Signals
 
 DR_RB0          DR <- BUS_0
 IR_RB0          IR <- BUS_0
-AR_RB1          AR <- BUS_1
-PC_RB1          PC <- BUS_1
-PC_WB1          PC -> BUS_1
-DR_WB1          AR -> BUS_1
-CR_WB1          CR -> BUS_1
+AR_RBA          AR <- BUS_A
+PC_RBA          PC <- BUS_A
+PC_WBA          PC -> BUS_A
+DR_WBA          AR -> BUS_A
+CR_WBA          CR -> BUS_A
 TR_RB2          TR <- BUS_2
 AC_RB2          AC <- BUS_2
 DR_WB2          DR -> BUS_2
@@ -171,16 +171,16 @@ AR_LOAD_1
 
 DR signals:
 DR_LOAD_0
-DR_OUTP_1
+DR_OUTP_A
 DR_OUTP_2
 
 PC signals:
 PC_LOAD
-PC_OUTP_1
+PC_OUTP_A
 PC_INC
 
 CR signals:
-CR_OUTP_1
+CR_OUTP_A
 
 TR signals:
 TR_LOAD_2
@@ -212,70 +212,85 @@ IR[1:0]     -> ALU_SELECT
 
 Microcontrol States
 
-INIT0: PC_WB1;
-INIT1 : PC_WB1, ~AR_WB1;    // PUT OUT PC
-INIT2 : FETCH_AR; FETCH_IR; // FETCH OP
-ADD0 : ~PC_WB1, AR_WB1, PC_INC;
-ADD1 : DR_RB0, PC_WB1;
-ADD2 : AC_RB2, TR_RB2, FN_WB2, FETCH, GOTO_3;
-AND0 : ~PC_WB1, AR_WB1, PC_INC;
-AND1 : DR_RB0, PC_WB1;
-AND2 : AC_RB2, TR_RB2, FN_WB2, FETCH, GOTO_3;
-NOR0 : ~PC_WB1, AR_WB1, PC_INC;
-NOR1 : DR_RB0, PC_WB1;
-NOR2 : AC_RB2, TR_RB2, FN_WB2, FETCH, GOTO_3;
-INC0 : ~PC_WB1, AR_WB1, PC_INC;
+INIT0 : PC_RBA, CR_WBA, AR_RBA;
+INIT1 : PC_WBA, AR_RBA;    // PUT OUT PC
+INIT2 : FETCH_AR, FETCH_IR, PC_INC; // FETCH OP
+ADD0 : DR_WBA, AR_RBA;
+ADD1 : DR_RB0, PC_WBA, AR_BDA;
+ADD2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
+SUB0 : DR_WBA, AR_RBA;
+SUB1 : DR_RB0, PC_WBA, AR_BDA;
+SUB2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
+AND0 : DR_WBA, AR_RDA;
+AND1 : DR_RB0, PC_WBA, AR_BDA;
+AND2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
+NOR0 : DR_WBA, AR_RBA;
+NOR1 : DR_RB0, PC_WBA, AR_RBA;
+NOR2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
+LIT0 : DR_WBA, AR_RBA;
+LIT1 : PC_WBA, AR_RBA, GOTO_2;
+INC0 : DR_WBA, AR_RBA;
 INC1 : DR_RB0;
 INC2 : DR_WB2, TR_RB2;
-INC3 : AR_WB1, W_MEM;
-INC4 : AR_WB1, AC_WB2, TR_RB2, GOTO_1;
-SHR0 : ~PC_WB1, AR_WB1, PC_INC;
+INC3 : W_MEM, GOTO_1;
+SHR0 : DR_WBA, AR_RBA;
 SHR1 : DR_RB0;
 SHR2 : DR_WB2, TR_RB2;
-SHR3 : AR_WB1, W_MEM;
-SHR4 : AR_WB1, AC_WB2, TR_RB2, GOTO_1;
-JMP0 : ~PC_WB1, AR_WB1, PC_INC;
-JMP1 : PC_RB1, GOTO_1;;
-JZE0 : ~PC_WB1, AR_WB1, PC_INC;
-JZE1 : PC_RB1 & TR_IS_Z, GOTO_1;
-LIT0 : ~PC_WB1, AR_WB1, PC_INC;
-LIT1 : AC_RB2, TR_RB2, AR_WB2, PC_WB1, GOTO_2;
-STA0 : ~PC_WB1, AR_WB1, PC_INC;
+SHR3 : W_MEM, GOTO_1;
+JMP0 : DR_WBA, AR_RBA;
+JMP1 : DR_WBA, PC_RBA, GOTO_2;
+JPI0 : DR_WBA, AR_RBA;
+JPI1 : DR_RBA;
+JPI2 : DR_WBA, AR_RBA, PC_RBA, GOTO_2;
+JNZ0 : PC_WBA, AR_RBA;
+JNZ1 : PC_RBA & TR_IS_NOT_Z, GOTO_1;
+JZE0 : PC_WBA, AR_RBA;
+JZE1 : PC_RBA & TR_IS_Z, GOTO_1;
+LDA0 : DR_RBA, AR_RBA;
+LDA1 : DR_RB0, PC_WBA, AR_RBA;
+LDA2 : AC_RB2, TR_RB2, DR_WB2, PC_INC, FETCH, GOTO_3;
+STA0 : DR_WBA, AR_RBA;
 STA1 : W_MEM, GOTO_1;
-LDI0 : ~PC_WB1, AR_WB1, PC_INC;
-LDI1 : FETCH_AR, ~PC_WB1, AR_WB1;
-LDI2 : AC_RB2, TR_RB2, AR_WB2, PC_WB1, GOTO_2;
-STI0 : ~PC_WB1, AR_WB1, PC_INC;
-STI1 : FETCH_AR, ~PC_WB1, AR_WB1;
-STI2 : W_MEM, GOTO_1;
+LDI0 : DR_WBA, AR_RBA;
+LDI1 : DR_RB0;
+LDI2 : DR_WBA, AR_RBA;
+LDI3 : DR_RB0, PC_WBA, AR_RBA;
+LDI4 : AC_RB2, TR_RB2, DR_WB2, PC_INC, FETCH, GOTO_3;
+STI0 : DR_WBA, AR_RBA;
+STI1 : DR_WB0;
+STI2 : DR_WBA, AR_RBA;
+STI3 : W_MEM, GOTO_1;
 
 
 
 States Reduction
 
-ADD0 = AND0 = NOR0 = INC0 = SHR0 = JMP0 = JZO0 = LIT0 = STA0 = LDI0 = STI0 -> READY
+ADD0 = AND0 = NOR0 = LIT0 = INC0 = SHR0 = JMP0 = JPI0 = JNZ0 = JZE0 = LDA0 = STA0 = LDI0 = STI0 -> READY
 ADD1 = AND1 = NOR1 -> ALU1
 ADD2 = AND2 = NOR2 -> ALU2
 
 INC1 = SHR1 = MAL1
 INC2 = SHR2 = MAL2
 INC3 = SHR3 = MAL3
-INC4 = SHR4 = MAL4
 
 INIT0 : LD_PC #0100;        // INIT PC
 INIT1 : PC_WB1, ~AR_WB1;    // PUT OUT PC
 INIT2 : FETCH_IR, FETCH_AR; // FETCH OP
-READY : ~PC_WB1, AR_WB1, PC_INC;
+READY : DR_WBA, AR_RBA;
 {
     ALU1: DR_RB0, PC_WB1;
     ALU2: AC_RB2, TR_RB2, FN_WB2, FETCH, GOTO_3;
+    LIT1: AC_RB2, TR_RB2, AR_WB2, PC_WB1, GOTO_2;
     MAL1: DR_RB0;
     MAL2: DR_WB2, TR_RB2;
-    MAL3: AR_WB1, W_MEM;
-    MAL4: AR_WB1, AC_WB2, TR_RB2, GOTO_1;
+    MAL3: AR_WB1, W_MEM, GOTO_1;
     JMP1: PC_RB1, GOTO_1;
+    JPI1:
+    JPI2:
+    JNZ1:
     JZE1: PC_RB1 & TR_IS_Z, GOTO_1;
-    LIT1: AC_RB2, TR_RB2, AR_WB2, PC_WB1, GOTO_2;
+    LDA1:
+    LDA2:
     STA1: W_MEM, GOTO_1;
     LDI1: FETCH_AR, ~PC_WB1, AR_WB1;
 	LDI2: AC_RB2, TR_RB2, AR_WB2, PC_WB1, GOTO_2;
@@ -293,21 +308,25 @@ INIT1   = 00001		-> 1
 INIT2   = 00010		-> 2
 READY   = 00011		-> 3
 JMP1    = 00100		-> 4
-JZE1    = 00101		-> 5
-STA1    = 00110		-> 6
-STA2    = 00111     -> 7
-MAL1    = 01000		-> 8
-MAL2    = 01001		-> 9
-MAL3    = 01010		-> A
-MAL4    = 01011     -> B
-LIT1    = 01100		-> C
-ALU1    = 01101		-> D
-ALU2    = 01110		-> E
-LDI1    = 10000		-> 10
-LDI2    = 10001		-> 11
-STI1    = 10100		-> 14
-STI2    = 10101		-> 15
-STI3    = 10110     -> 16
+JPI1    = 00101     -> 5
+JPI2    = 00110     -> 6
+JNZ1    = 00111     -> 7
+JZE1    = 01000     -> 8
+LDA1    = 01001     -> 9
+LDA2    = 01010     -> A
+STA1    = 01011		-> B
+STA2    = 01100     -> C
+MAL1    = 01101		-> D
+MAL2    = 01110		-> E
+MAL3    = 01111		-> F
+LIT1    = 10000		-> 10
+ALU1    = 10001		-> 11
+ALU2    = 10010		-> 12
+LDI1    = 10011		-> 13
+LDI2    = 10100		-> 14
+STI1    = 10101		-> 15
+STI2    = 10110		-> 16
+STI3    = 10111     -> 17
 
 
 Opcodes to Microcontrol States
@@ -316,9 +335,12 @@ Opcodes to Microcontrol States
 0010  -> 01101   =   2  -> D
 0011  -> 01101   =   3  -> D
 0100  -> 01000   =   4  -> 8
-0101  -> 01000   =   5  -> 8
+0110
+0111  -> 01000   =   5  -> 8
 1000  -> 00100   =   8  -> 4
+1001
 1010  -> 00101   =   A  -> 5
+1011
 1100  -> 00111   =   C  -> C
 1101  -> 10000   =   D  -> 10
 1110  -> 00110   =   E  -> 6
@@ -332,24 +354,25 @@ dispatch_uop  (uState = 0011)
 load_pc = pc_rd1 & (tr_is_z | z_on)
 
 FIELD : 16_SGN_CNTRL
-        / goto(2) | fetch(1) | dr_rd0 || ar_wb1 | w_mem | pc_wb1 | pc_inc || pc_rd1 | tr_rd2 | ac_rd2 | z_on || bus2_wr(2) | res(2)
-INIT0   0               0       0          0        0       0       0        1         0        0         0         ac          0       =   0000 || 0000 || 1000 || 0100    =   0084
-INIT1   0               0       0          0        0       1       0        0         0        0         0         ac          0       =   0000 || 0010 || 0000 || 0100    =   0204
-INIT2   0               1       0          0        0       1       0        0         0        0         0         ac          2       =   0010 || 0010 || 0000 || 0110    =   2206
-READY   0               0       0          1        0       0       1        0         1        0         0         ac          0       =   0000 || 1001 || 0100 || 0100    =   0944
-JMP1    1               0       0          1        0       0       0        1         0        0         0         ac          0       =   0100 || 1000 || 1001 || 0100    =   4884
-JZE1    1               0       0          1        0       0       0        1         0        0         0         ac          0       =   0100 || 1000 || 1000 || 0100    =   4884
-STA1    0               0       0          1        1       0       0        0         0        0         0         ac          0       =   0000 || 1100 || 0000 || 0100    =   0C04
-STA2    1               0       0          1        0       0       0        0         0        0         0         ac          0       =   0100 || 1000 || 0000 || 0100    =   4804       
-INC1    0               0       1          1        0       0       0        0         0        0         0         dr          0       =   0001 || 1000 || 0000 || 0000    =   1800
-INC2    0               0       0          1        0       0       0        0         1        0         0         dr          0       =   0000 || 1000 || 0100 || 0000    =   0840
-INC3    0               0       0          1        1       0       0        0         0        0         0         ac          0       =   0000 || 1100 || 0000 || 0100    =   0C04
-INC4    1               0       0          1        0       0       0        0         1        0         0         ac          0       =   0100 || 1000 || 0100 || 0100    =   4844
-LIT1    2               0       0          0        0       1       0        0         1        1         0         ar          0       =   1000 || 0010 || 0110 || 1100    =   826C
-ALU1    0               0       1          1        0       0       0        0         0        0         0         fn          0       =   0001 || 1010 || 0000 || 1000    =   1808
-ALU2    3               1       0          0        0       1       0        0         1        1         0         fn          2       =   1110 || 0010 || 0110 || 1010    =   E26A
-LDI1    0               0       0     ||   1        0       0       0    ||  0         0        0         0  ||     fn          2       =   0000 || 1000 || 0000 || 1010    =   080A
-LDI2    2               0       0          0        0       1       0        0         1        1         0         ar          0       =   1000 || 0010 || 0110 || 1110    =   826E
-STI1    0               0       0          1        0       0       0        0         0        0         0         fn          2       =   0000 || 1000 || 0000 || 1010    =   080A
-STI2    0               0       0          1        1       0       0        0         0        0         0         fn          0       =   0000 || 1100 || 0000 || 1000    =   0C08
-STI3    1               0       0          1        0       0       0        0         0        0         0         fn          0       =   0100 || 1000 || 0000 || 1000    =   4808
+        / goto(2) | fetch(1) | dr_rd  || dr_wa | w_mem | pc_wa | pc_inc || pc_rd  | tr_rd  | ac_rd  | ar_rd || bus2_wr(2) | z_cond | z_on
+INIT0   0               0       0          0        0       0       0        1         0        0      0         ac          0            =   0000 || 0000 || 1000 || 0100    =   0084
+INIT1   0               0       0          0        0       1       0        0         0        0      0         ac          0            =   0000 || 0010 || 0000 || 0100    =   0204
+INIT2   0               1       0          0        0       1       0        0         0        0      0         ac          0            =   0010 || 0010 || 0000 || 0110    =   2206
+READY   0               0       0          1        0       0       1        0         1        0      0         ac          0            =   0000 || 1001 || 0100 || 0100    =   0944
+JMP1    1               0       0          1        0       0       0        1         0        0      0         ac          0            =   0100 || 1000 || 1001 || 0100    =   4884
+JZE1    1               0       0          1        0       0       0        1         0        0      0         ac          1        1   =   0100 || 1000 || 1000 || 0100    =   4884
+JNZ1    1               0       0          1        0       0       0        1         0        0      0         ac          1        0   =
+STA1    0               0       0          1        1       0       0        0         0        0      0         ac          0            =   0000 || 1100 || 0000 || 0100    =   0C04
+STA2    1               0       0          1        0       0       0        0         0        0      0         ac          0            =   0100 || 1000 || 0000 || 0100    =   4804       
+INC1    0               0       1          1        0       0       0        0         0        0      0         dr          0            =   0001 || 1000 || 0000 || 0000    =   1800
+INC2    0               0       0          1        0       0       0        0         1        0      0         dr          0            =   0000 || 1000 || 0100 || 0000    =   0840
+INC3    0               0       0          1        1       0       0        0         0        0      0         ac          0            =   0000 || 1100 || 0000 || 0100    =   0C04
+INC4    1               0       0          1        0       0       0        0         1        0      0         ac          0            =   0100 || 1000 || 0100 || 0100    =   4844
+LIT1    2               0       0          0        0       1       0        0         1        1      0         ar          0            =   1000 || 0010 || 0110 || 1100    =   826C
+ALU1    0               0       1          1        0       0       0        0         0        0      0         fn          0            =   0001 || 1010 || 0000 || 1000    =   1808
+ALU2    3               1       0          0        0       1       0        0         1        1      0         fn          2            =   1110 || 0010 || 0110 || 1010    =   E26A
+LDI1    0               0       0     ||   1        0       0       0   ||   0         0        0      0   ||    fn          2            =   0000 || 1000 || 0000 || 1010    =   080A
+LDI2    2               0       0          0        0       1       0        0         1        1      0         ar          0            =   1000 || 0010 || 0110 || 1110    =   826E
+STI1    0               0       0          1        0       0       0        0         0        0      0         fn          2            =   0000 || 1000 || 0000 || 1010    =   080A
+STI2    0               0       0          1        1       0       0        0         0        0      0         fn          0            =   0000 || 1100 || 0000 || 1000    =   0C08
+STI3    1               0       0          1        0       0       0        0         0        0      0         fn          0            =   0100 || 1000 || 0000 || 1000    =   4808

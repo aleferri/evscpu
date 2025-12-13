@@ -35,8 +35,9 @@ _const_8000:                        .dw 0x8000
 _ioptr:                             .dw 0xFFF0  ; ioptr base
 _errno:                             .dw 0
 
-_pow2_units:                        .dw 1, 2, 4, 8, 6, 2, 4     ; nibble to units
-_pow2_tens:                         .dw 0, 0, 0, 0, 1, 3, 6     ; nibble to tens (0x0-0xA: 0, 0xB-0xF: nibble - 0xA)
+_pow2_units:                        .dw 1, 2, 4, 8, 6, 2, 4, 8, 6, 2     ; bit to units
+_pow2_tens:                         .dw 0, 0, 0, 0, 1, 3, 6, 2, 5, 1     ; bit to tens (0x0-0xA: 0, 0xB-0xF: nibble - 0xA)
+_pow2_hundreds:                     .dw 0, 0, 0, 0, 0, 0, 0, 1, 2, 5     ; bit to hundreds     
     
 
 
