@@ -214,7 +214,7 @@ Microcontrol States
 
 INIT0 : PC_RBA, CR_WBA, AR_RBA;
 INIT1 : PC_WBA, AR_RBA;    // PUT OUT PC
-INIT2 : FETCH_AR, FETCH_IR, PC_INC; // FETCH OP
+INIT2 : FETCH, PC_INC;     // FETCH OP
 ADD0 : DR_WBA, AR_RBA;
 ADD1 : DR_RB0, PC_WBA, AR_BDA;
 ADD2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
@@ -232,11 +232,11 @@ LIT1 : PC_WBA, AR_RBA, GOTO_2;
 INC0 : DR_WBA, AR_RBA;
 INC1 : DR_RB0;
 INC2 : DR_WB2, TR_RB2;
-INC3 : W_MEM, GOTO_1;
+INC3 : AC_WB2, TR_RB2, W_MEM, GOTO_1;
 SHR0 : DR_WBA, AR_RBA;
 SHR1 : DR_RB0;
 SHR2 : DR_WB2, TR_RB2;
-SHR3 : W_MEM, GOTO_1;
+SHR3 : AC_WB2, TR_RB2, W_MEM, GOTO_1;
 JMP0 : DR_WBA, AR_RBA;
 JMP1 : DR_WBA, PC_RBA, GOTO_2;
 JPI0 : DR_WBA, AR_RBA;
@@ -273,33 +273,36 @@ INC1 = SHR1 = MAL1
 INC2 = SHR2 = MAL2
 INC3 = SHR3 = MAL3
 
-INIT0 : LD_PC #0100;        // INIT PC
-INIT1 : PC_WB1, ~AR_WB1;    // PUT OUT PC
-INIT2 : FETCH_IR, FETCH_AR; // FETCH OP
-READY : DR_WBA, AR_RBA;
+INIT0 : LD_PC #0100;                 // INIT PC
+INIT1 : PC_WB1, ~AR_WB1;             // PUT OUT PC
+INIT2 : FETCH, PC_INC;               // FETCH OPCODE
+READY : DR_WBA, AR_RBA;              // PUT ARG IN AR
 {
-    ALU1: DR_RB0, PC_WB1;
-    ALU2: AC_RB2, TR_RB2, FN_WB2, FETCH, GOTO_3;
-    LIT1: AC_RB2, TR_RB2, AR_WB2, PC_WB1, GOTO_2;
-    MAL1: DR_RB0;
-    MAL2: DR_WB2, TR_RB2;
-    MAL3: AR_WB1, W_MEM, GOTO_1;
+    ALU1: DR_RB0, PC_WB1;                                   // READ OP1 (OP0 implied AC); AR <- PC
+    ALU2: AC_RB2, TR_RB2, FN_WB2, FETCH, GOTO_3;            // AC, TR <- FN(AC, DR); FETCH
+    LIT1: AC_RB2, TR_RB2, AR_WB2, PC_WB1, GOTO_2;           // AC, TR <- DR; AR <- PC
+    MAL1: DR_RB0;                                           // READ OP
+    MAL2: UN_WB2, TR_RB2;                                   // TR <- UN(DR)
+    MAL3: AC_WB2, TR_RB2, W_MEM, GOTO_1;                    // MEM[AR] <- TMP; TMP <- AC
     JMP1: PC_RB1, GOTO_1;
-    JPI1:
-    JPI2:
-    JNZ1:
+    JPI1: DR_RB0;
+    JPI2: DR_WBA, AR_RBA, PC_RBA, GOTO_2;
+    JNZ1: PC_RB1 & TR_IS_NOT_Z, GOTO_1;
     JZE1: PC_RB1 & TR_IS_Z, GOTO_1;
-    LDA1:
-    LDA2:
+    LDA1: DR_RB0, PC_WBA, AR_RBA;
+    LDA2: AC_RB2, TR_RB2, DR_WB2, PC_INC, FETCH, GOTO_3;
     STA1: W_MEM, GOTO_1;
-    LDI1: FETCH_AR, ~PC_WB1, AR_WB1;
-	LDI2: AC_RB2, TR_RB2, AR_WB2, PC_WB1, GOTO_2;
-	STI1: FETCH_AR, ~PC_WB1, AR_WB1;
-	STI2: W_MEM, GOTO_1;
+    LDI1: DR_RB0;
+	LDI2: DR_WBA, AR_RBA;
+    LDI3: DR_RB0, PC_WBA, AR_RBA;
+    LDI4 : AC_RB2, TR_RB2, DR_WB2, PC_INC, FETCH, GOTO_3;
+	STI1: DR_WB0;
+	STI2: DR_WBA, AR_RBA;
+    STI3: W_MEM, GOTO_1;
 }
 
 Microcode (16 bit):
-goto(0: inc, 1: next = 0001, 2: next = 0010, 3: next = 0011) | fetch_ir(1) | fetch_ar(1) || dr_rd0 | ar_wb1 | w_mem | pc_wb1 || pc_inc | pc_rd1 | tr_rd2 | ac_rd2 || bus2_wr(2) | z_on | reserveds(1)
+goto(0: inc, 1: next = 0001, 2: next = 0010, 3: next = 0011) | fetch |  dr_rd || dr_wa | w_mem | pc_wa | pc_inc || pc_rd | tr_rd | ac_rd | ar_rd || bus2_wr(2) | z_cond | z_on
 
 States Encoding
 
@@ -324,27 +327,30 @@ ALU1    = 10001		-> 11
 ALU2    = 10010		-> 12
 LDI1    = 10011		-> 13
 LDI2    = 10100		-> 14
-STI1    = 10101		-> 15
-STI2    = 10110		-> 16
-STI3    = 10111     -> 17
+LDI3    = 10101     -> 15
+LDI4    = 10110     -> 16
+STI1    = 11000		-> 18
+STI2    = 11001		-> 19
+STI3    = 11010     -> 2A
 
 
 Opcodes to Microcontrol States
-0000  -> 01101   =   0  -> D
-0001  -> 01101   =   1  -> D
-0010  -> 01101   =   2  -> D
-0011  -> 01101   =   3  -> D
-0100  -> 01000   =   4  -> 8
-0110
-0111  -> 01000   =   5  -> 8
-1000  -> 00100   =   8  -> 4
-1001
-1010  -> 00101   =   A  -> 5
-1011
-1100  -> 00111   =   C  -> C
-1101  -> 10000   =   D  -> 10
-1110  -> 00110   =   E  -> 6
-1111  -> 10010   =   F  -> 14
+
+ADD @ : 0000 -> 10001 =     0   ->  11
+SUB @ : 0001 -> 10001 =     1   ->  11
+AND @ : 0010 -> 10001 =     2   ->  11
+NOR @ : 0011 -> 10001 =     3   ->  11
+LIT # : 0101 -> 10000 =     5   ->  10    
+INC @ : 0110 -> 01101 =     6   ->   D
+SHR @ : 0111 -> 01101 =     7   ->   D
+JMP @ : 1000 -> 00100 =     8   ->   4    
+JPI @ : 1001 -> 00101 =     9   ->   5
+JNZ @ : 1010 -> 00111 =     A   ->   7    
+JZE @ : 1011 -> 01000 =     B   ->   8
+LDA @ : 1100 -> 01001 =     C   ->   9
+LDI @ : 1101 -> 10011 =     D   ->  14
+STA @ : 1110 -> 01011 =     E   ->   B
+STI @ : 1111 -> 11000 =     F   ->  18
 
 
 Microcontrol Signals
