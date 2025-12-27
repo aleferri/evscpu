@@ -279,16 +279,16 @@ INIT2 : FETCH, PC_INC;               // FETCH OPCODE
 READY : DR_WBA, AR_RBA;              // PUT ARG IN AR
 {
     ALU1: DR_RB0, PC_WB1;                                   // READ OP1 (OP0 implied AC); AR <- PC
-    ALU2: AC_RB2, TR_RB2, FN_WB2, FETCH, GOTO_3;            // AC, TR <- FN(AC, DR); FETCH
-    LIT1: AC_RB2, TR_RB2, AR_WB2, PC_WB1, GOTO_2;           // AC, TR <- DR; AR <- PC
+    ALU2: AC_RB2, TR_RB2, FN_WB2, PC_INC, FETCH, GOTO_3;    // AC, TR <- FN(AC, DR); FETCH
+    LIT1: AC_RB2, TR_RB2, DR_WB2, PC_WB1, AR_RBA, GOTO_2;   // AC, TR <- DR; AR <- PC
     MAL1: DR_RB0;                                           // READ OP
     MAL2: UN_WB2, TR_RB2;                                   // TR <- UN(DR)
     MAL3: AC_WB2, TR_RB2, W_MEM, GOTO_1;                    // MEM[AR] <- TMP; TMP <- AC
-    JMP1: PC_RB1, GOTO_1;
+    JMP1: PC_RBA, GOTO_2;
     JPI1: DR_RB0;
     JPI2: DR_WBA, AR_RBA, PC_RBA, GOTO_2;
-    JNZ1: PC_RB1 & TR_IS_NOT_Z, GOTO_1;
-    JZE1: PC_RB1 & TR_IS_Z, GOTO_1;
+    JNZ1: PC_RBA & TR_IS_NOT_Z, GOTO_1;
+    JZE1: PC_RBA & TR_IS_Z, GOTO_1;
     LDA1: DR_RB0, PC_WBA, AR_RBA;
     LDA2: AC_RB2, TR_RB2, DR_WB2, PC_INC, FETCH, GOTO_3;
     STA1: W_MEM, GOTO_1;
@@ -296,7 +296,7 @@ READY : DR_WBA, AR_RBA;              // PUT ARG IN AR
 	LDI2: DR_WBA, AR_RBA;
     LDI3: DR_RB0, PC_WBA, AR_RBA;
     LDI4 : AC_RB2, TR_RB2, DR_WB2, PC_INC, FETCH, GOTO_3;
-	STI1: DR_WB0;
+	STI1: DR_RB0;
 	STI2: DR_WBA, AR_RBA;
     STI3: W_MEM, GOTO_1;
 }
@@ -318,10 +318,9 @@ JZE1    = 01000     -> 8
 LDA1    = 01001     -> 9
 LDA2    = 01010     -> A
 STA1    = 01011		-> B
-STA2    = 01100     -> C
-MAL1    = 01101		-> D
-MAL2    = 01110		-> E
-MAL3    = 01111		-> F
+MAL1    = 01100		-> C
+MAL2    = 01101		-> D
+MAL3    = 01110		-> E
 LIT1    = 10000		-> 10
 ALU1    = 10001		-> 11
 ALU2    = 10010		-> 12
@@ -341,8 +340,8 @@ SUB @ : 0001 -> 10001 =     1   ->  11
 AND @ : 0010 -> 10001 =     2   ->  11
 NOR @ : 0011 -> 10001 =     3   ->  11
 LIT # : 0101 -> 10000 =     5   ->  10    
-INC @ : 0110 -> 01101 =     6   ->   D
-SHR @ : 0111 -> 01101 =     7   ->   D
+INC @ : 0110 -> 01101 =     6   ->   C
+SHR @ : 0111 -> 01101 =     7   ->   C
 JMP @ : 1000 -> 00100 =     8   ->   4    
 JPI @ : 1001 -> 00101 =     9   ->   5
 JNZ @ : 1010 -> 00111 =     A   ->   7    
