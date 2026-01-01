@@ -15,6 +15,7 @@ DR - 16 bit  -- Data Register, contains the read data
 TR - 16 bit  -- Temp Register, contains AC at the beginning of each instruction
 AR - 16 bit  -- Address Register, output to the memory
 IR - 04 bit  -- Instruction Register, contains the 2 bit opcode 
+CA - 16 bit  -- Constant Address 0x100
 
 Encoding
 
@@ -167,7 +168,7 @@ IR signals:
 IR_LOAD_0
 
 AR signals:
-AR_LOAD_1
+AR_LOAD_A
 
 DR signals:
 DR_LOAD_0
@@ -175,12 +176,12 @@ DR_OUTP_A
 DR_OUTP_2
 
 PC signals:
-PC_LOAD
+PC_LOAD_A
 PC_OUTP_A
 PC_INC
 
-CR signals:
-CR_OUTP_A
+CA signals:
+CA_OUTP_A
 
 TR signals:
 TR_LOAD_2
@@ -274,7 +275,7 @@ INC2 = SHR2 = MAL2
 INC3 = SHR3 = MAL3
 
 INIT0 : LD_PC #0100;                 // INIT PC
-INIT1 : PC_WB1, ~AR_WB1;             // PUT OUT PC
+INIT1 : PC_WBA, AR_RBA;              // PUT OUT PC
 INIT2 : FETCH, PC_INC;               // FETCH OPCODE
 READY : DR_WBA, AR_RBA;              // PUT ARG IN AR
 {
@@ -330,7 +331,7 @@ LDI3    = 10101     -> 15
 LDI4    = 10110     -> 16
 STI1    = 11000		-> 18
 STI2    = 11001		-> 19
-STI3    = 11010     -> 2A
+STI3    = 11010     -> 1A
 
 
 Opcodes to Microcontrol States
@@ -352,32 +353,12 @@ STA @ : 1110 -> 01011 =     E   ->   B
 STI @ : 1111 -> 11000 =     F   ->  18
 
 
-Microcontrol Signals
+Microcontrol Signals - Wired
 
 load_constant (uState = 0000)
 dispatch_uop  (uState = 0011)
 load_pc = pc_rd1 & (tr_is_z | z_on)
 
-FIELD : 16_SGN_CNTRL
-        / goto(2) | fetch(1) | dr_rd  || dr_wa | w_mem | pc_wa | pc_inc || pc_rd  | tr_rd  | ac_rd  | ar_rd || bus2_wr(2) | z_cond | z_on
-INIT0   0               0       0          0        0       0       0        1         0        0      0         ac          0            =   0000 || 0000 || 1000 || 0100    =   0084
-INIT1   0               0       0          0        0       1       0        0         0        0      0         ac          0            =   0000 || 0010 || 0000 || 0100    =   0204
-INIT2   0               1       0          0        0       1       0        0         0        0      0         ac          0            =   0010 || 0010 || 0000 || 0110    =   2206
-READY   0               0       0          1        0       0       1        0         1        0      0         ac          0            =   0000 || 1001 || 0100 || 0100    =   0944
-JMP1    1               0       0          1        0       0       0        1         0        0      0         ac          0            =   0100 || 1000 || 1001 || 0100    =   4884
-JZE1    1               0       0          1        0       0       0        1         0        0      0         ac          1        1   =   0100 || 1000 || 1000 || 0100    =   4884
-JNZ1    1               0       0          1        0       0       0        1         0        0      0         ac          1        0   =
-STA1    0               0       0          1        1       0       0        0         0        0      0         ac          0            =   0000 || 1100 || 0000 || 0100    =   0C04
-STA2    1               0       0          1        0       0       0        0         0        0      0         ac          0            =   0100 || 1000 || 0000 || 0100    =   4804       
-INC1    0               0       1          1        0       0       0        0         0        0      0         dr          0            =   0001 || 1000 || 0000 || 0000    =   1800
-INC2    0               0       0          1        0       0       0        0         1        0      0         dr          0            =   0000 || 1000 || 0100 || 0000    =   0840
-INC3    0               0       0          1        1       0       0        0         0        0      0         ac          0            =   0000 || 1100 || 0000 || 0100    =   0C04
-INC4    1               0       0          1        0       0       0        0         1        0      0         ac          0            =   0100 || 1000 || 0100 || 0100    =   4844
-LIT1    2               0       0          0        0       1       0        0         1        1      0         ar          0            =   1000 || 0010 || 0110 || 1100    =   826C
-ALU1    0               0       1          1        0       0       0        0         0        0      0         fn          0            =   0001 || 1010 || 0000 || 1000    =   1808
-ALU2    3               1       0          0        0       1       0        0         1        1      0         fn          2            =   1110 || 0010 || 0110 || 1010    =   E26A
-LDI1    0               0       0     ||   1        0       0       0   ||   0         0        0      0   ||    fn          2            =   0000 || 1000 || 0000 || 1010    =   080A
-LDI2    2               0       0          0        0       1       0        0         1        1      0         ar          0            =   1000 || 0010 || 0110 || 1110    =   826E
-STI1    0               0       0          1        0       0       0        0         0        0      0         fn          2            =   0000 || 1000 || 0000 || 1010    =   080A
-STI2    0               0       0          1        1       0       0        0         0        0      0         fn          0            =   0000 || 1100 || 0000 || 1000    =   0C08
-STI3    1               0       0          1        0       0       0        0         0        0      0         fn          0            =   0100 || 1000 || 0000 || 1000    =   4808
+Microcontrol Signals - Rom
+
+see ucode.ods
