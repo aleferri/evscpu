@@ -23,7 +23,7 @@
 
 __shadow:   .dw 0xF
 
-.advance 0x0200                         ; in reality 0x100
+.advance 0x0100
 
 __boot:     LIT     6
             STA     _arg0

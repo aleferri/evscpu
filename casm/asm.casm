@@ -18,51 +18,6 @@
     .return ( addr12 >> 1 ) & 0xFF;
 }
 
-
-.opcode JMP {{ addr12 }}
-.with ( addr12 : Ints ) -> {
-    .outr [ .expr OPC_HIGH(0x80, addr12), .expr OPC_LOW(addr12) ];
-}
-
-.opcode JZE {{ addr12 }}
-.with ( addr12 : Ints ) -> {
-    .outr [ .expr OPC_HIGH(0xA0, addr12), .expr OPC_LOW(addr12) ];
-}
-
-.opcode LIT {{ addr12 }}
-.with ( addr12 : Ints ) -> {
-    .if addr12 >= 4096 {
-        .error addr12, "Cannot load literal outside the first 4096 values";
-    }
-    .outr [ 0xC0 + ( ( addr12 >> 8 ) & 0x0F ), addr12 & 0xFF ];
-}
-
-.opcode LDI {{ addr12 }}
-.with ( addr12 : Ints ) -> {
-    .outr [ .expr OPC_HIGH(0xD0, addr12 << 1), .expr OPC_LOW(addr12 << 1) ];
-}
-
-.opcode STA {{ addr12 }}
-.with ( addr12 : Ints ) -> {
-    .outr [ .expr OPC_HIGH(0xE0, addr12), .expr OPC_LOW(addr12) ];
-}
-
-.opcode STI {{ addr12 }}
-.with ( addr12 : Ints ) -> {
-    .outr [ .expr OPC_HIGH(0xF0, addr12), .expr OPC_LOW(addr12) ];
-}
-
-// Unary ALU
-.opcode INC {{ addr12 }}
-.with ( addr12 : Ints ) -> {
-    .outr [ .expr OPC_HIGH(0x40, addr12), .expr OPC_LOW(addr12) ];
-}
-
-.opcode SHR {{ addr12 }}
-.with ( addr12 : Ints ) -> {
-    .outr [ .expr OPC_HIGH(0x50, addr12), .expr OPC_LOW(addr12) ];
-}
-
 // Binary ALU
 .opcode ADD {{ addr12 }}
 .with ( addr12 : Ints ) -> {
@@ -82,4 +37,62 @@
 .opcode NOR {{ addr12 }}
 .with ( addr12 : Ints ) -> {
     .outr [ .expr OPC_HIGH(0x30, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode LIT {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .if addr12 >= 4096 {
+        .error addr12, "Cannot load literal outside the first 4096 values";
+    }
+    .outr [ .expr OPC_HIGH(0x50, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode INC {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .outr [ .expr OPC_HIGH(0x60, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode SHR {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .outr [ .expr OPC_HIGH(0x70, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode JMP {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .outr [ .expr OPC_HIGH(0x80, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode JPI {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .outr [ .expr OPC_HIGH(0x90, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode JNZ {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .outr [ .expr OPC_HIGH(0xA0, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode JZE {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .outr [ .expr OPC_HIGH(0xB0, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode LDA {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .outr [ .expr OPC_HIGH(0xC0, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode LDI {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .outr [ .expr OPC_HIGH(0xD0, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode STA {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .outr [ .expr OPC_HIGH(0xE0, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode STI {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .outr [ .expr OPC_HIGH(0xF0, addr12), .expr OPC_LOW(addr12) ];
 }
