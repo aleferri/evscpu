@@ -41,5 +41,5 @@ _pow2_hundreds:                     .dw 0, 0, 0, 0, 0, 0, 0, 1, 2, 5     ; bit t
     
 
 
-__fatal_error:                      STA __errno
+__fatal_error:                      STA _errno
                                     JMP __fatal_error

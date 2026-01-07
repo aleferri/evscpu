@@ -60,7 +60,7 @@ __init:     LIT     1
 .selftest:	LIT     0                   ; require working lit/sta/add/jze/jmp, test the other instructions    
             STA     __shadow
             LIT     10
-            LDA     _shadow
+            LDA     __shadow
             JZE     .oklda
 .oklda:     LIT     3					
 			STA     __shadow
@@ -89,7 +89,7 @@ __init:     LIT     1
             JNZ     .okjnz
             LIT     0x5                 ; Comparison error
             JMP     .hard_err
-.okjnz      LIT     0
+.okjnz:     LIT     0
             STA     __shadow
             INC     __shadow
             LDA     __shadow
