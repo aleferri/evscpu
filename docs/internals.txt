@@ -2,7 +2,7 @@ Evolved Very Simple CPU: VS CPU is a teaching architecture to explain CPU implem
 I don't remember the book, if you know the book or are the author (in the same book you described the Relative Simple CPU) tell me the title
 and your name, and i will gladly cite you in the credits. Thank you.
 
-The architecture is a 16 bit one with 8 instruction. The main register is 16 bit wide
+The architecture is a 16 bit one with 15 instructions. The main register is 16 bit wide
 
 The visible register set is made by two registers: PC (the instruction pointer) and AC (the accumulator)
  
@@ -14,7 +14,7 @@ AC - 16 bit  -- ACcumulator register
 DR - 16 bit  -- Data Register, contains the read data
 TR - 16 bit  -- Temp Register, contains AC at the beginning of each instruction
 AR - 16 bit  -- Address Register, output to the memory
-IR - 04 bit  -- Instruction Register, contains the 2 bit opcode 
+IR - 04 bit  -- Instruction Register, contains the 4 bit opcode 
 CA - 16 bit  -- Constant Address 0x100
 
 Encoding
@@ -148,8 +148,8 @@ IR_RB0          IR <- BUS_0
 AR_RBA          AR <- BUS_A
 PC_RBA          PC <- BUS_A
 PC_WBA          PC -> BUS_A
-DR_WBA          AR -> BUS_A
-CR_WBA          CR -> BUS_A
+DR_WBA          DR -> BUS_A
+CA_WBA          CA -> BUS_A
 TR_RB2          TR <- BUS_2
 AC_RB2          AC <- BUS_2
 DR_WB2          DR -> BUS_2
@@ -213,41 +213,41 @@ IR[1:0]     -> ALU_SELECT
 
 Microcontrol States
 
-INIT0 : PC_RBA, CR_WBA, AR_RBA;
+INIT0 : PC_RBA, CA_WBA, AR_RBA;
 INIT1 : PC_WBA, AR_RBA;    // PUT OUT PC
 INIT2 : FETCH, PC_INC;     // FETCH OP
 ADD0 : DR_WBA, AR_RBA;
-ADD1 : DR_RB0, PC_WBA, AR_BDA;
+ADD1 : DR_RB0, PC_WBA, AR_RBA;
 ADD2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
 SUB0 : DR_WBA, AR_RBA;
-SUB1 : DR_RB0, PC_WBA, AR_BDA;
+SUB1 : DR_RB0, PC_WBA, AR_RBA;
 SUB2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
-AND0 : DR_WBA, AR_RDA;
-AND1 : DR_RB0, PC_WBA, AR_BDA;
+AND0 : DR_WBA, AR_RBA;
+AND1 : DR_RB0, PC_WBA, AR_RBA;
 AND2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
 NOR0 : DR_WBA, AR_RBA;
 NOR1 : DR_RB0, PC_WBA, AR_RBA;
 NOR2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
 LIT0 : DR_WBA, AR_RBA;
-LIT1 : PC_WBA, AR_RBA, GOTO_2;
+LIT1 : AC_RB2, TR_RB2, DR_WB2, PC_WBA, AR_RBA, GOTO_2;
 INC0 : DR_WBA, AR_RBA;
 INC1 : DR_RB0;
-INC2 : DR_WB2, TR_RB2;
+INC2 : UN_WB2, TR_RB2;
 INC3 : AC_WB2, TR_RB2, W_MEM, GOTO_1;
 SHR0 : DR_WBA, AR_RBA;
 SHR1 : DR_RB0;
-SHR2 : DR_WB2, TR_RB2;
+SHR2 : UN_WB2, TR_RB2;
 SHR3 : AC_WB2, TR_RB2, W_MEM, GOTO_1;
 JMP0 : DR_WBA, AR_RBA;
 JMP1 : DR_WBA, PC_RBA, GOTO_2;
 JPI0 : DR_WBA, AR_RBA;
-JPI1 : DR_RBA;
+JPI1 : DR_RB0;
 JPI2 : DR_WBA, AR_RBA, PC_RBA, GOTO_2;
 JNZ0 : PC_WBA, AR_RBA;
 JNZ1 : PC_RBA & TR_IS_NOT_Z, GOTO_1;
 JZE0 : PC_WBA, AR_RBA;
 JZE1 : PC_RBA & TR_IS_Z, GOTO_1;
-LDA0 : DR_RBA, AR_RBA;
+LDA0 : DR_WBA, AR_RBA;
 LDA1 : DR_RB0, PC_WBA, AR_RBA;
 LDA2 : AC_RB2, TR_RB2, DR_WB2, PC_INC, FETCH, GOTO_3;
 STA0 : DR_WBA, AR_RBA;
@@ -258,7 +258,7 @@ LDI2 : DR_WBA, AR_RBA;
 LDI3 : DR_RB0, PC_WBA, AR_RBA;
 LDI4 : AC_RB2, TR_RB2, DR_WB2, PC_INC, FETCH, GOTO_3;
 STI0 : DR_WBA, AR_RBA;
-STI1 : DR_WB0;
+STI1 : DR_RB0;
 STI2 : DR_WBA, AR_RBA;
 STI3 : W_MEM, GOTO_1;
 
@@ -279,13 +279,13 @@ INIT1 : PC_WBA, AR_RBA;              // PUT OUT PC
 INIT2 : FETCH, PC_INC;               // FETCH OPCODE
 READY : DR_WBA, AR_RBA;              // PUT ARG IN AR
 {
-    ALU1: DR_RB0, PC_WB1;                                   // READ OP1 (OP0 implied AC); AR <- PC
+    ALU1: DR_RB0, PC_WBA, AR_RBA;                                   // READ OP1 (OP0 implied AC); AR <- PC
     ALU2: AC_RB2, TR_RB2, FN_WB2, PC_INC, FETCH, GOTO_3;    // AC, TR <- FN(AC, DR); FETCH
-    LIT1: AC_RB2, TR_RB2, DR_WB2, PC_WB1, AR_RBA, GOTO_2;   // AC, TR <- DR; AR <- PC
+    LIT1: AC_RB2, TR_RB2, DR_WB2, PC_WBA, AR_RBA, GOTO_2;   // AC, TR <- DR; AR <- PC
     MAL1: DR_RB0;                                           // READ OP
     MAL2: UN_WB2, TR_RB2;                                   // TR <- UN(DR)
     MAL3: AC_WB2, TR_RB2, W_MEM, GOTO_1;                    // MEM[AR] <- TMP; TMP <- AC
-    JMP1: PC_RBA, GOTO_2;
+    JMP1: DR_WBA, PC_RBA, GOTO_2;
     JPI1: DR_RB0;
     JPI2: DR_WBA, AR_RBA, PC_RBA, GOTO_2;
     JNZ1: PC_RBA & TR_IS_NOT_Z, GOTO_1;

@@ -27,6 +27,7 @@ _sp:                                .dw 0  ; stack pointer
 _const_0001:                        .dw 1
 _const_0002:                        .dw 2
 _const_0004:                        .dw 4
+_const_000A:                        .dw 10
 _const_000B:                        .dw 11
 _const_00FF:                        .dw 0xFF
 _const_8000:                        .dw 0x8000
@@ -41,5 +42,5 @@ _pow2_hundreds:                     .dw 0, 0, 0, 0, 0, 0, 0, 1, 2, 5     ; bit t
     
 
 
-__fatal_error:                      STA __errno
+__fatal_error:                      STA _errno
                                     JMP __fatal_error
