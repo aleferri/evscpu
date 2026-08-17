@@ -5,7 +5,7 @@ and your name, and i will gladly cite you in the credits. Thank you.
 The architecture is a 16 bit one with 15 instructions. The main register is 16 bit wide
 
 The visible register set is made by two registers: PC (the instruction pointer) and AC (the accumulator)
- 
+
 
 Full Register Set (Visible + Hidden)
 
@@ -14,351 +14,225 @@ AC - 16 bit  -- ACcumulator register
 DR - 16 bit  -- Data Register, contains the read data
 TR - 16 bit  -- Temp Register, contains AC at the beginning of each instruction
 AR - 16 bit  -- Address Register, output to the memory
-IR - 04 bit  -- Instruction Register, contains the 4 bit opcode 
-CA - 16 bit  -- Constant Address 0x100
+IR - 04 bit  -- Instruction Register, contains the 4 bit opcode
+CA - 16 bit  -- Constant Address 0x100, reset vector, hardwired inside Address Bus Control
 
 Encoding
 
 The encoding is composed of 4 bit opcode and 12 bit address/literal.
 
-Instructions
+    0000 ADD @      0100 ----       1000 JMP @      1100 LDA @
+    0001 SUB @      0101 LIT #      1001 JPI @      1101 LDI @
+    0010 AND @      0110 INC @      1010 JNZ @      1110 STI @
+    0011 NOR @      0111 SHR @      1011 JZE @      1111 STA @
 
-[ Legend ] 
-    @ : address
-    <- : assign
-    , : parallel (e.g. IR <- X, AR <- Y means that both IR and AR get updated in the same clock cycle)
-    ; : await next clock
-    + : binary add
-    - : binary sub
-    & : binary and
-
-ADD @ : 0000 address( 12 bit )
-
-    IR <- MEM[PC], DR <- MEM[PC]
-    AR <- DR;
-    DR <- MEM[AR];                                                          -- OPT:  AR <- PC
-    AC <- AC + DR; TR <- AC + DR                                            -- OPT:  IR <- MEM[PC], DR <- MEM[PC]
-    
-SUB @ : 0001 address( 12 bit )
-
-    IR <- MEM[PC], DR <- MEM[PC]
-    AR <- DR;
-    DR <- MEM[AR];                                                          -- OPT:  AR <- PC
-    AC <- AC - DR; TR <- AC - DR                                            -- OPT:  IR <- MEM[PC], DR <- MEM[PC]
-
-AND @ : 0010 address( 12 bit )
-
-    IR <- MEM[PC], DR <- MEM[PC]
-    AR <- DR;
-    DR <- MEM[AR];                                                          -- OPT:  AR <- PC
-    AC <- AC & DR; TR <- AC & DR                                            -- OPT:  IR <- MEM[PC], DR <- MEM[PC]
-    
-NOR @ : 0011 address( 12 bit )
-
-    IR <- MEM[PC], DR <- MEM[PC]
-    AR <- DR;
-    DR <- MEM[AR];                                                          -- OPT:  AR <- PC
-    AC <- AC nor DR; TR <- AC nor DR                                        -- OPT:  IR <- MEM[PC], DR <- MEM[PC]
-    
-LIT # : 0101 literal( 12 bit )
-
-    IR <- MEM[PC], DR <- MEM[PC];                                           -- OPT:  AR <- PC 
-    AC <- DR                                                                -- OPT:  IR <- MEM[PC], DR <- MEM[PC]
-    
-INC @ : 0110 address( 12 bit )
-
-    IR <- MEM[PC], DR <- MEM[PC]; 
-    AR <- DR;
-    DR <- MEM[AR];
-    TR <- DR + 1;
-    MEM[AR] <- TR;                                                          -- OPT:  AR <- PC              
-    
-SHR @ : 0111 address( 12 bit )
-
-    IR <- MEM[PC], DR <- MEM[PC]; 
-    AR <- DR;
-    DR <- MEM[AR];
-    TR <- DR >> 1;
-    MEM[AR] <- TR;                                                          -- OPT:  AR <- PC
-
-JMP @ : 1000 address( 12 bit )
-
-    IR <- MEM[PC], DR <- MEM[PC];
-    PC <- DR;                                                               -- OPT:  AR <- DR
-    
-JPI @ : 1001 address( 12 bit )          -- TODO
-    IR <- MEM[PC], DR <- MEM[PC];
-    AR <- DR
-    DR <- MEM[AR]
-    PC <- DR                                                                -- OPT:  AR <- DR
-
-JNZ @ : 1010 address( 12 bit )          -- TODO
-
-    IR <- MEM[PC], DR <- MEM[PC];
-    PC <- DR IF AC != 0;
-    
-JZE @ : 1011 address( 12 bit )          -- TODO
-
-    IR <- MEM[PC], DR <- MEM[PC];
-    PC <- DR IF AC == 0;
-
-LDA @ : 1100 address( 12 bit )          -- TODO
-
-    IR <- MEM[PC], DR <- MEM[PC]
-    AR <- DR;
-    DR <- MEM[AR];                                                          -- OPT:  AR <- PC
-    AC <- DR; TR <- DR                                                      -- OPT:  IR <- MEM[PC], DR <- MEM[PC]
-	
-LDI @ : 1101 address( 12 bit )
-
-	IR <- MEM[PC], DR <- MEM[PC];
-    AR <- DR;
-    DR <- MEM[AR];
-    AR <- DR;
-    AC <- MEM[AR]; TR <- MEM[AR];                                           -- OPT:  AR <- PC
-
-STA @ : 1110 address( 12 bit )
-
-    IR <- MEM[PC], DR <- MEM[PC];
-    AR <- DR;
-    MEM[AR] <- TR;                                                          -- OPT:  AR <- PC
-	
-STI @ : 1111 address( 12 bit )
-
-	IR <- MEM[PC], DR <- MEM[PC];
-    AR <- DR;
-    DR <- MEM[AR]
-    AR <- DR;
-	MEM[AR] <- TR;                                                          -- OPT:  AR <- PC
-    
-
-PSEUDO (LIT followed by ADD/SUB/AND/NOR/LDA): ADL, SBL, ANL, NRL, LDL
-
-Shared BUS
-
-BUS_0 := connect( AR(read), DR(read), IR(read), MEM_D_IN(write) );                      BUS_0 has only one writer (MEM_D_IN)
-BUS_1 := connect( PC(read), PC(write), AR(write), MEM_ADR(read), 0x100(write) );        BUS_1 has three writers (AR, PC, 0x0100), and two reader (PC & MEM_ADR)
-BUS_2 := connect( TR(read), AC(read/write), ALU(write), AR(write), DR_URY(write) );     BUS_2 has four writers (ALU, AC, AR, DR_URY) and two readers (TR & AC)
+Opcode 0100 is not implemented: it executes as a NOP.
+The word 0x0000 is a valid ADD of the content of address 0.
 
 
-Signals
+Datapath
 
-DR_RB0          DR <- BUS_0
-IR_RB0          IR <- BUS_0
-AR_RBA          AR <- BUS_A
-PC_RBA          PC <- BUS_A
-PC_WBA          PC -> BUS_A
-DR_WBA          DR -> BUS_A
-CA_WBA          CA -> BUS_A
-TR_RB2          TR <- BUS_2
-AC_RB2          AC <- BUS_2
-DR_WB2          DR -> BUS_2
-AC_WB2          AC -> BUS_2
-FN_WB2          FN -> BUS_2     ( ALU binary operations )
-UN_WB2          UN -> BUS_2     ( Unary operations )
-ALU_MUX         ALU <- select( AC + DR, AC - DR, AC & DR, AC nor DR )
-W_MEM           MEM[ MEM_ADR ] <- TR
-PC_INC          PC <- PC + 1
+Shared buses
 
+BUS_0 := MEM_D_IN (write) -> DR, IR                             one writer, the memory data input
+BUS_A := PC, DR, CA (write) -> AR, and PC (read)                three writers, enabled by pc_wa / dr_wa / ldc
+BUS_2 := UN, AC, FN, DR (write) -> TR, AC (read)                four writers, selected by bm[1:0]
 
-Registers Signals:
-
-
-IR signals:
-IR_LOAD_0
-
-AR signals:
-AR_LOAD_A
-
-DR signals:
-DR_LOAD_0
-DR_OUTP_A
-DR_OUTP_2
-
-PC signals:
-PC_LOAD_A
-PC_OUTP_A
-PC_INC
-
-CA signals:
-CA_OUTP_A
-
-TR signals:
-TR_LOAD_2
-
-AC signals:
-AC_LOAD_2
-AC_OUTP_2
-
-FN signals:
-FN_OUTP_2
-FN_MUX
-
-UN signals:
-UN_OUTP_2
-
-
+ldc is an output enable and not a load: it drives CA onto BUS_A, and AR still
+needs lar to latch it. A word that asserts ldc alone does nothing at all.
 
 Direct links
 
-AC          -> ALU_PORT_0
-DR          -> ALU_PORT_1
-DR          -> ALU_MEM_0
-DR          -> PC_IN
-TR          -> MEM_D_OUT
-AR          -> MEM_A_OUT
-IR[1:0]     -> ALU_SELECT
+AC          -> ALU port 0
+DR          -> ALU port 1
+DR          -> AluMem input (unary unit)
+DR          -> PC input          PC can only ever be loaded from DR
+TR          -> MEM data out      the value written by wm is always TR
+AR          -> MEM address out   the memory is only ever addressed by AR
+IR[1:0]     -> ALU function select
+IR[0]       -> AluMem function select (0: DR+1, 1: DR>>1)
+TR          -> zero detector     the branch condition is TR == 0, never AC
+
+Control signals (the outputs of Microcode Control Unit
+
+The microcode ROM is 128 x 24 and is addressed by uPC, a 7 bit counter with
+parallel load. Every bit of the control word drives one signal directly, so no
+gate stands between the ROM output and the datapath: all the logic of the unit
+sits on the uPC path, which starts from flip flop outputs and has a full cycle
+to settle.
+
+The useq field of the control word picks the next uPC:
+
+    next    uPC + 1
+    dopc    { OPC, 100 }                  dispatch on the opcode from memory
+    dir     { IR, 100 }                   dispatch on the opcode already in IR
+    brz     { uPC[6:3], target } if TR == 0, uPC + 1 otherwise
+
+dopc ends an instruction in the same word that fetches the next one, dir ends it
+later. A routine that fetches early and keeps working with IR already loaded
+therefore dispatches with dir. There is no gain in doing so while AR is the only
+address source, because then the fetch can only be the last memory access of a
+routine, but the choice belongs to the microcode and not to the wiring.
+
+uPC counts across slot boundaries, so a routine may run out of word 7 of its slot
+into the low words of the next one. Reset clears uPC.
+
+Slot layout
+
+Each opcode owns 8 words. Dispatch always enters at word 4, so words 0..3 of a
+slot are unreachable from dispatch and are available as the tail of the routine
+in the preceding slot. A routine may therefore be up to 8 words long, provided
+the following slot holds a routine of at most 4 words.
+
+Words 0..3 of slot 0 are reachable only out of reset, where uPC = 0, and hold the
+boot sequence. Slot 15 has no successor, so the routine in slot 15 must fit in
+words 4..7.
+
+Control word (24 bit)
+
+  23:18 reserved, zero
+  17:16 useq      next, dopc, dir, brz
+  15:13 target    target word of brz
+  12:11 bm        BUS_2 writer
+     10 tr_rd       9 ac_rd       8 pc_rd       7 inc
+      6 ldc         5 lar         4 dr_wa       3 pc_wa
+      2 wm          1 fetch       0 dr_rd
+
+No field overlaps another.
+
+Boot
+
+    w0  ldc, lar                AR <- 0x100
+    w1  dr_rd                   DR <- MEM[0x100]
+    w2  dr_wa, lar, pc_rd       AR <- DR, PC <- DR
+    w3  fetch, inc, dopc        IR, DR <- MEM[PC], PC <- PC + 1
+
+The word at 0x100 is the address of the entry point, not an instruction.
 
 
+Instruction timing
 
-Microcontrol States
+Legend
+    @ : address                 # : literal
+    <- : assign                 , : parallel, same clock cycle
+    ; : await next clock        w<n> : word <n> of the slot
 
-INIT0 : PC_RBA, CA_WBA, AR_RBA;
-INIT1 : PC_WBA, AR_RBA;    // PUT OUT PC
-INIT2 : FETCH, PC_INC;     // FETCH OP
-ADD0 : DR_WBA, AR_RBA;
-ADD1 : DR_RB0, PC_WBA, AR_RBA;
-ADD2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
-SUB0 : DR_WBA, AR_RBA;
-SUB1 : DR_RB0, PC_WBA, AR_RBA;
-SUB2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
-AND0 : DR_WBA, AR_RBA;
-AND1 : DR_RB0, PC_WBA, AR_RBA;
-AND2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
-NOR0 : DR_WBA, AR_RBA;
-NOR1 : DR_RB0, PC_WBA, AR_RBA;
-NOR2 : AC_RB2, TR_RB2, FN_WB2, FETCH, PC_INC, GOTO_3;
-LIT0 : DR_WBA, AR_RBA;
-LIT1 : AC_RB2, TR_RB2, DR_WB2, PC_WBA, AR_RBA, GOTO_2;
-INC0 : DR_WBA, AR_RBA;
-INC1 : DR_RB0;
-INC2 : UN_WB2, TR_RB2;
-INC3 : AC_WB2, TR_RB2, W_MEM, GOTO_1;
-SHR0 : DR_WBA, AR_RBA;
-SHR1 : DR_RB0;
-SHR2 : UN_WB2, TR_RB2;
-SHR3 : AC_WB2, TR_RB2, W_MEM, GOTO_1;
-JMP0 : DR_WBA, AR_RBA;
-JMP1 : DR_WBA, PC_RBA, GOTO_2;
-JPI0 : DR_WBA, AR_RBA;
-JPI1 : DR_RB0;
-JPI2 : DR_WBA, AR_RBA, PC_RBA, GOTO_2;
-JNZ0 : PC_WBA, AR_RBA;
-JNZ1 : PC_RBA & TR_IS_NOT_Z, GOTO_1;
-JZE0 : PC_WBA, AR_RBA;
-JZE1 : PC_RBA & TR_IS_Z, GOTO_1;
-LDA0 : DR_WBA, AR_RBA;
-LDA1 : DR_RB0, PC_WBA, AR_RBA;
-LDA2 : AC_RB2, TR_RB2, DR_WB2, PC_INC, FETCH, GOTO_3;
-STA0 : DR_WBA, AR_RBA;
-STA1 : W_MEM, GOTO_1;
-LDI0 : DR_WBA, AR_RBA;
-LDI1 : DR_RB0;
-LDI2 : DR_WBA, AR_RBA;
-LDI3 : DR_RB0, PC_WBA, AR_RBA;
-LDI4 : AC_RB2, TR_RB2, DR_WB2, PC_INC, FETCH, GOTO_3;
-STI0 : DR_WBA, AR_RBA;
-STI1 : DR_RB0;
-STI2 : DR_WBA, AR_RBA;
-STI3 : W_MEM, GOTO_1;
+Every routine ends with the fetch of the next instruction, so there is no shared
+fetch sequence and the dispatch cycle does useful work.
 
+ADD @, SUB @, AND @, NOR @ : slots 0..3, 4 cycles
 
+    w4  AR <- DR;
+    w5  DR <- MEM[AR];
+    w6  AC <- FN(AC, DR), TR <- FN(AC, DR), AR <- PC;
+    w7  IR, DR <- MEM[AR], PC <- PC + 1
 
-States Reduction
+LIT # : slot 5, 2 cycles
 
-ADD0 = AND0 = NOR0 = LIT0 = INC0 = SHR0 = JMP0 = JPI0 = JNZ0 = JZE0 = LDA0 = STA0 = LDI0 = STI0 -> READY
-ADD1 = AND1 = NOR1 -> ALU1
-ADD2 = AND2 = NOR2 -> ALU2
+    w4  AC <- DR, TR <- DR, AR <- PC;
+    w5  IR, DR <- MEM[AR], PC <- PC + 1
 
-INC1 = SHR1 = MAL1
-INC2 = SHR2 = MAL2
-INC3 = SHR3 = MAL3
+INC @, SHR @ : slots 6, 7, 5 cycles
 
-INIT0 : LD_PC #0100;                 // INIT PC
-INIT1 : PC_WBA, AR_RBA;              // PUT OUT PC
-INIT2 : FETCH, PC_INC;               // FETCH OPCODE
-READY : DR_WBA, AR_RBA;              // PUT ARG IN AR
-{
-    ALU1: DR_RB0, PC_WBA, AR_RBA;                                   // READ OP1 (OP0 implied AC); AR <- PC
-    ALU2: AC_RB2, TR_RB2, FN_WB2, PC_INC, FETCH, GOTO_3;    // AC, TR <- FN(AC, DR); FETCH
-    LIT1: AC_RB2, TR_RB2, DR_WB2, PC_WBA, AR_RBA, GOTO_2;   // AC, TR <- DR; AR <- PC
-    MAL1: DR_RB0;                                           // READ OP
-    MAL2: UN_WB2, TR_RB2;                                   // TR <- UN(DR)
-    MAL3: AC_WB2, TR_RB2, W_MEM, GOTO_1;                    // MEM[AR] <- TMP; TMP <- AC
-    JMP1: DR_WBA, PC_RBA, GOTO_2;
-    JPI1: DR_RB0;
-    JPI2: DR_WBA, AR_RBA, PC_RBA, GOTO_2;
-    JNZ1: PC_RBA & TR_IS_NOT_Z, GOTO_1;
-    JZE1: PC_RBA & TR_IS_Z, GOTO_1;
-    LDA1: DR_RB0, PC_WBA, AR_RBA;
-    LDA2: AC_RB2, TR_RB2, DR_WB2, PC_INC, FETCH, GOTO_3;
-    STA1: W_MEM, GOTO_1;
-    LDI1: DR_RB0;
-	LDI2: DR_WBA, AR_RBA;
-    LDI3: DR_RB0, PC_WBA, AR_RBA;
-    LDI4 : AC_RB2, TR_RB2, DR_WB2, PC_INC, FETCH, GOTO_3;
-	STI1: DR_RB0;
-	STI2: DR_WBA, AR_RBA;
-    STI3: W_MEM, GOTO_1;
-}
+    w4  AR <- DR;
+    w5  DR <- MEM[AR];
+    w6  TR <- UN(DR);
+    w7  MEM[AR] <- TR, AR <- PC;
+    w0  TR <- AC, IR, DR <- MEM[AR], PC <- PC + 1      in the next slot
 
-Microcode (16 bit):
-goto(0: inc, 1: next = 0001, 2: next = 0010, 3: next = 0011) | fetch |  dr_rd || dr_wa | w_mem | pc_wa | pc_inc || pc_rd | tr_rd | ac_rd | ar_rd || bus2_wr(2) | z_cond | z_on
+JMP @ : slot 8, 2 cycles
 
-States Encoding
+    w4  AR <- DR, PC <- DR;
+    w5  IR, DR <- MEM[AR], PC <- PC + 1
 
-INIT0   = 00000		-> 0
-INIT1   = 00001		-> 1
-INIT2   = 00010		-> 2
-READY   = 00011		-> 3
-JMP1    = 00100		-> 4
-JPI1    = 00101     -> 5
-JPI2    = 00110     -> 6
-JNZ1    = 00111     -> 7
-JZE1    = 01000     -> 8
-LDA1    = 01001     -> 9
-LDA2    = 01010     -> A
-STA1    = 01011		-> B
-MAL1    = 01100		-> C
-MAL2    = 01101		-> D
-MAL3    = 01110		-> E
-LIT1    = 10000		-> 10
-ALU1    = 10001		-> 11
-ALU2    = 10010		-> 12
-LDI1    = 10011		-> 13
-LDI2    = 10100		-> 14
-LDI3    = 10101     -> 15
-LDI4    = 10110     -> 16
-STI1    = 11000		-> 18
-STI2    = 11001		-> 19
-STI3    = 11010     -> 1A
+JPI @ : slot 9, 4 cycles
+
+    w4  AR <- DR;
+    w5  DR <- MEM[AR];
+    w6  AR <- DR, PC <- DR;
+    w7  IR, DR <- MEM[AR], PC <- PC + 1
+
+JNZ @ : slot 10, 3 cycles taken, 2 not taken
+
+    w4  AR <- PC, brz w6;
+    w5  AR <- DR, PC <- DR;
+    w6  IR, DR <- MEM[AR], PC <- PC + 1
+
+JZE @ : slot 11, 3 cycles taken, 2 not taken
+
+    w4  AR <- PC, brz w6;
+    w5  IR, DR <- MEM[AR], PC <- PC + 1
+    w6  AR <- DR, PC <- DR;
+    w7  IR, DR <- MEM[AR], PC <- PC + 1
+
+LDA @ : slot 12, 4 cycles
+
+    w4  AR <- DR;
+    w5  DR <- MEM[AR];
+    w6  AC <- DR, TR <- DR, AR <- PC;
+    w7  IR, DR <- MEM[AR], PC <- PC + 1
+
+LDI @ : slot 13, 5 cycles
+
+    w4  AR <- DR;
+    w5  DR <- MEM[AR];
+    w6  AR <- DR;
+    w7  DR <- MEM[AR], AR <- PC;
+    w0  AC <- DR, TR <- DR, IR, DR <- MEM[AR], PC <- PC + 1      in the next slot
+
+STI @ : slot 14, 5 cycles
+
+    w4  AR <- DR;
+    w5  DR <- MEM[AR];
+    w6  AR <- DR;
+    w7  MEM[AR] <- TR, AR <- PC;
+    w0  IR, DR <- MEM[AR], PC <- PC + 1                          in the next slot
+
+STA @ : slot 15, 3 cycles
+
+    w4  AR <- DR;
+    w5  MEM[AR] <- TR, AR <- PC;
+    w6  IR, DR <- MEM[AR], PC <- PC + 1
+
+STI is at opcode 1110 and STA at 1111 because STI needs five words and slot 15
+has no successor to hold the tail.
 
 
-Opcodes to Microcontrol States
+Invariants the microcode relies on
 
-ADD @ : 0000 -> 10001 =     0   ->  11
-SUB @ : 0001 -> 10001 =     1   ->  11
-AND @ : 0010 -> 10001 =     2   ->  11
-NOR @ : 0011 -> 10001 =     3   ->  11
-LIT # : 0101 -> 10000 =     5   ->  10    
-INC @ : 0110 -> 01101 =     6   ->   C
-SHR @ : 0111 -> 01101 =     7   ->   C
-JMP @ : 1000 -> 00100 =     8   ->   4    
-JPI @ : 1001 -> 00101 =     9   ->   5
-JNZ @ : 1010 -> 00111 =     A   ->   7    
-JZE @ : 1011 -> 01000 =     B   ->   8
-LDA @ : 1100 -> 01001 =     C   ->   9
-LDI @ : 1101 -> 10011 =     D   ->  14
-STA @ : 1110 -> 01011 =     E   ->   B
-STI @ : 1111 -> 11000 =     F   ->  18
+TR holds AC at the start of every instruction. Only INC and SHR break it, and
+they restore it in their tail. The branch condition and the value written by
+every store both come from TR, so the invariant is what makes JNZ, JZE, STA and
+STI correct.
+
+A word that asserts wm never loads TR, so the value being written cannot change
+during the write.
+
+A word that asserts wm may load AR, but only because the write is a single pulse
+that starts on the falling edge of the clock and ends before the next rising one:
+write is wm gated with the inverted clock, and the memory latches on the rising
+edge of write. In that window AR has been stable for half a cycle and has not yet
+taken the value this word loads into it.
+
+That pulse shape is the reason the microcode is allowed to write and reload AR in
+one word, and it is not free to change. Gating wm with the clock high phase
+instead does not work, whatever edge the memory latches on: wm falls after the
+edge that ends the word, so a second write event lands exactly while AR is
+changing, and every store writes twice, the second time to the address the next
+word loads, which is the program itself.
+
+The masking flag of DR follows flag' = FE | (flag & ~LD), so a full load clears
+it: an ALU or LDA operand keeps all sixteen bits. If the flag could not be
+cleared, every read datum would lose its top four bits.
+
+A word that asserts brz is followed by the not taken path, and its target is the
+first word of the taken path. Both paths end with a fetch of their own.
+
+A word that asserts fetch never asserts dr_rd, and at most one of pc_wa and
+dr_wa is asserted in the same word.
 
 
-Microcontrol Signals - Wired
+Microcode image
 
-load_constant (uState = 0000)
-dispatch_uop  (uState = 0011)
-load_pc = pc_rd1 & (tr_is_z | z_on)
-
-Microcontrol Signals - Rom
-
-see ucode.ods
+ucode/evscpu.uc is the source, ucode/ucode.hex and ucode/ucode.lst are generated
+by tools/ucasm.py, which also writes the image into EVSCPU.CircuitProject.

@@ -1,0 +1,103 @@
+; generato da tools/ucasm.py
+
+; control word (24 bit)
+;      20  pass
+;      19  save
+;   18:17  useq
+;   16:13  target
+;   12:11  bm
+;      10  tr_rd
+;       9  ac_rd
+;       8  pc_rd
+;       7  inc
+;       6  ldc
+;       5  lar
+;       4  dr_wa
+;       3  pc_wa
+;       2  wm
+;       1  fetch
+;       0  dr_rd
+
+; microcodice
+00  000060  boot.0         bus_a=const ar=load
+01  000001  boot.1         mem=read
+02  000130  boot.2         bus_a=dr ar=load pc=load
+03  048082  boot.3         mem=fetch pc=inc next=dispatch
+04  000030  alu.0          bus_a=dr ar=load
+05  000001  alu.1          mem=read
+06  001628  alu.2          bus_a=pc ar=load ac=load tr=load bus2=fn
+07  048082  alu.3          mem=fetch pc=inc next=dispatch
+14  000030  alu.0          bus_a=dr ar=load
+15  000001  alu.1          mem=read
+16  001628  alu.2          bus_a=pc ar=load ac=load tr=load bus2=fn
+17  048082  alu.3          mem=fetch pc=inc next=dispatch
+24  000030  alu.0          bus_a=dr ar=load
+25  000001  alu.1          mem=read
+26  001628  alu.2          bus_a=pc ar=load ac=load tr=load bus2=fn
+27  048082  alu.3          mem=fetch pc=inc next=dispatch
+34  000030  alu.0          bus_a=dr ar=load
+35  000001  alu.1          mem=read
+36  001628  alu.2          bus_a=pc ar=load ac=load tr=load bus2=fn
+37  048082  alu.3          mem=fetch pc=inc next=dispatch
+44  000028  nop.0          bus_a=pc ar=load
+45  048082  nop.1          mem=fetch pc=inc next=dispatch
+54  001E28  lit.0          bus_a=pc ar=load ac=load tr=load bus2=dr
+55  048082  lit.1          mem=fetch pc=inc next=dispatch
+64  000030  mal.0          bus_a=dr ar=load
+65  000001  mal.1          mem=read
+66  000400  mal.2          tr=load
+67  00002C  mal.3          mem=write bus_a=pc ar=load
+68  048C82  mal.4          mem=fetch pc=inc tr=load bus2=ac next=dispatch
+74  000030  mal.0          bus_a=dr ar=load
+75  000001  mal.1          mem=read
+76  000400  mal.2          tr=load
+77  00002C  mal.3          mem=write bus_a=pc ar=load
+78  048C82  mal.4          mem=fetch pc=inc tr=load bus2=ac next=dispatch
+84  000130  jmp.0          bus_a=dr ar=load pc=load
+85  048082  jmp.1          mem=fetch pc=inc next=dispatch
+94  000030  jpi.0          bus_a=dr ar=load
+95  000001  jpi.1          mem=read
+96  000130  jpi.2          bus_a=dr ar=load pc=load
+97  048082  jpi.3          mem=fetch pc=inc next=dispatch
+A4  06C028  jnz.0          bus_a=pc ar=load next=brz(w6)
+A5  000130  jnz.1          bus_a=dr ar=load pc=load
+A6  048082  jnz.2          mem=fetch pc=inc next=dispatch
+B4  06C028  jze.0          bus_a=pc ar=load next=brz(w6)
+B5  048082  jze.1          mem=fetch pc=inc next=dispatch
+B6  000130  jze.2          bus_a=dr ar=load pc=load
+B7  048082  jze.3          mem=fetch pc=inc next=dispatch
+C4  000030  lda.0          bus_a=dr ar=load
+C5  000001  lda.1          mem=read
+C6  001E28  lda.2          bus_a=pc ar=load ac=load tr=load bus2=dr
+C7  048082  lda.3          mem=fetch pc=inc next=dispatch
+D4  000030  ldi.0          bus_a=dr ar=load
+D5  000001  ldi.1          mem=read
+D6  000030  ldi.2          bus_a=dr ar=load
+D7  000029  ldi.3          mem=read bus_a=pc ar=load
+D8  049E82  ldi.4          mem=fetch pc=inc ac=load tr=load bus2=dr next=dispatch
+E4  000030  sta.0          bus_a=dr ar=load
+E5  00002C  sta.1          mem=write bus_a=pc ar=load
+E6  048082  sta.2          mem=fetch pc=inc next=dispatch
+F4  000030  sti.0          bus_a=dr ar=load
+F5  000001  sti.1          mem=read
+F6  000030  sti.2          bus_a=dr ar=load
+F7  00002C  sti.3          mem=write bus_a=pc ar=load
+F8  048082  sti.4          mem=fetch pc=inc next=dispatch
+
+; slot
+0   04   add   alu    4 cicli
+1   14   sub   alu    4 cicli
+2   24   and   alu    4 cicli
+3   34   nor   alu    4 cicli
+4   44   ---   nop    2 cicli
+5   54   lit   lit    2 cicli
+6   64   inc   mal    5 cicli
+7   74   shr   mal    5 cicli
+8   84   jmp   jmp    2 cicli
+9   94   jpi   jpi    4 cicli
+A   A4   jnz   jnz    3/2 cicli
+B   B4   jze   jze    2/3 cicli
+C   C4   lda   lda    4 cicli
+D   D4   ldi   ldi    5 cicli
+E   E4   sta   sta    3 cicli
+F   F4   sti   sti    5 cicli

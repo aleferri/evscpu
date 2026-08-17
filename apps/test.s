@@ -23,7 +23,7 @@
 
 __shadow:   .dw 0xF
 
-.advance 0x0100
+.include "boot.s"
 
 __boot:     LIT     6
             STA     _arg0
@@ -34,12 +34,10 @@ __boot:     LIT     6
             JMP     __init.hard_err
 .ok:        LIT     __init.print
             STA     _ra
-            LIT     0
-            ADD     _ioptr
-            STA     _arg1
             JMP     __init
             
 .include "lib.s"
+.include "io.s"
 
 __init:     LIT     1
 			JZE     .hard_err			; one or both of LIT/JZE not working
@@ -105,27 +103,39 @@ __init:     LIT     1
 ;.okldi:
 ;.oksti:
 
-.print:		LDA     _ioptr              ; _ix0 = 0xFFF0          
-
-.dg0:       STA     _arg1
-            LIT     8
+.print:     LIT     8
             STA     _arg0
+            LIT     .emit0
+            STA     _ra
+            JMP     __bin2dec
+.emit0:     LIT     0
+            STA     _arg2
             LIT     .dg1
             STA     _ra
-            JMP     __split_bin
+            JMP     __put_dec
 
 .dg1:       LIT     46
             STA     _arg0
+            LIT     .emit1
+            STA     _ra
+            JMP     __bin2dec
+.emit1:     LIT     0
+            STA     _arg2
             LIT     .dg2
             STA     _ra
-            JMP     __split_bin
-			
-.dg2:		LIT     17
+            JMP     __put_dec
+
+.dg2:       LIT     17
             STA     _arg0
+            LIT     .emit2
+            STA     _ra
+            JMP     __bin2dec
+.emit2:     LIT     3
+            STA     _arg2
             LIT     .wait
             STA     _ra
-            JMP     __split_bin
-			
+            JMP     __put_dec
+
 .wait:      LIT     0xF
             LIT     0xE
             LIT     0xD

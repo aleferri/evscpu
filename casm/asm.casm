@@ -15,6 +15,18 @@
     .return ( opc << 8 ) + addr12;
 }
 
+// ADR emette una parola grezza contenente un indirizzo: serve per il vettore di
+// reset, perche' .dw non risolve gli identificatori.
+.inline WORD
+.with ( value: Ints ) -> {
+    .return value;
+}
+
+.opcode ADR {{ addr16 }}
+.with ( addr16 : Ints ) -> {
+    .out [ .expr WORD(addr16) ];
+}
+
 // Binary ALU
 .opcode ADD {{ addr12 }}
 .with ( addr12 : Ints ) -> {

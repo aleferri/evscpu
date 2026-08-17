@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+apps/*.export.txt
+sim/hdl/
+casmeleon.exe

@@ -27,9 +27,9 @@ __memset:       LDA     _arg2
 .end:           JPI     _ra
                 
 
-; split binary number in hundreds, tens and units
-; bin2str: bin: char, dest: ptr
-__split_bin:    LIT     0xFF
+; convert a binary number to its decimal digits
+; arg0: value (0..255), leaves hundreds in _g2, tens in _g1, units in _g0
+__bin2dec:      LIT     0xFF
                 AND     _arg0
                 STA     _arg0
                 LIT     _pow2_units         ; prepare units table
@@ -72,19 +72,10 @@ __split_bin:    LIT     0xFF
 .carry_tens:    LDA     _g1
                 SUB     _const_000A         ; tens - 10
                 AND     _const_8000         ; test sign bit
-                JNZ     .write              ; tens < 10, tens done
+                JNZ     .done               ; tens < 10, tens done
                 LDA     _g1
                 SUB     _const_000A
                 STA     _g1                 ; tens -= 10
                 INC     _g2                 ; carry into hundreds
                 JMP     .carry_tens
-.write:         LDA     _g2                 ; write hundreds
-                STI     _arg1
-                INC     _arg1               ; increment pointer
-                LDA     _g1                 ; write tens
-                STI     _arg1
-                INC     _arg1
-                LDA     _g0                 ; write units
-                STI     _arg1
-                INC     _arg1
-                JPI     _ra                 ; return
+.done:          JPI     _ra                 ; digits in _g2, _g1, _g0

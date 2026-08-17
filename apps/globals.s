@@ -33,7 +33,8 @@ _const_00FF:                        .dw 0xFF
 _const_8000:                        .dw 0x8000
 
                 
-_ioptr:                             .dw 0xFFF0  ; ioptr base
+_timer_ptr:                         .dw 0xFFF0  ; Timer: 6 digits at FFF0..FFF5, selected by ADDR[2:0];
+                                                ; its CS is ADDR[15:4] all ones
 _errno:                             .dw 0
 
 _pow2_units:                        .dw 1, 2, 4, 8, 6, 2, 4, 8, 6, 2     ; bit to units
